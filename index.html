@@ -1,1018 +1,552 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="id">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>NanoXyin // Cyber Systems</title>
-    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Orbitron:wght@400;700;900&display=swap" rel="stylesheet">
-    <script src="https://unpkg.com/@ffmpeg/ffmpeg@0.12.10/dist/umd/ffmpeg.js"></script>
-    <script src="https://unpkg.com/@ffmpeg/util@0.12.1/dist/umd/index.js"></script>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>NanoXyin Video Repair System</title>
+    <link rel="manifest" href="data:application/json;base64,eyJuYW1lIjoiTmFub1h5aW4gVmlkZW8gUmVwYWlyIiwic2hvcnRfbmFtZSI6IlZJREVPUkZJWCIsInN0YXJ0X3VybCI6Ii4iLCJkaXNwbGF5Ijoic3RhbmRhbG9uZSIsImJhY2tncm91bmRfY29sb3IiOiIjMGEwYTBhIiwidGhlbWVfY29sb3IiOiIjMDBmZmNjIn0=">
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E🔧%3C/text%3E%3C/svg%3E">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        cyber: {
+                            dark: '#0a0a0a',
+                            panel: '#111111',
+                            accent: '#00ffcc',
+                            warn: '#ff3366',
+                            info: '#00ccff'
+                        }
+                    },
+                    animation: {
+                        'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+                        'scan': 'scan 2s linear infinite',
+                        'glitch': 'glitch 1s linear infinite'
+                    },
+                    keyframes: {
+                        scan: {
+                            '0%': { transform: 'translateY(-100%)' },
+                            '100%': { transform: 'translateY(100%)' }
+                        },
+                        glitch: {
+                            '0%, 100%': { transform: 'translate(0)' },
+                            '20%': { transform: 'translate(-2px, 2px)' },
+                            '40%': { transform: 'translate(-2px, -2px)' },
+                            '60%': { transform: 'translate(2px, 2px)' },
+                            '80%': { transform: 'translate(2px, -2px)' }
+                        }
+                    }
+                }
+            }
+        }
+    </script>
     <style>
-        :root {
-            --neon-cyan: #00f0ff;
-            --neon-pink: #ff00a0;
-            --neon-green: #00ff41;
-            --neon-yellow: #ffee00;
-            --dark-bg: #050505;
-            --darker: #0a0a0f;
-            --panel-bg: rgba(10, 10, 15, 0.95);
-            --border-glow: 0 0 10px var(--neon-cyan), 0 0 20px rgba(0, 240, 255, 0.3);
+        @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Inter:wght@300;400;600;800&display=swap');
+        
+        * { 
+            font-family: 'Inter', sans-serif; 
+            -webkit-tap-highlight-color: transparent;
         }
-
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
+        
+        .mono { font-family: 'JetBrains Mono', monospace !important; }
+        
         body {
-            background: var(--dark-bg);
-            color: var(--neon-cyan);
-            font-family: 'JetBrains Mono', monospace;
+            background: #0a0a0a;
+            color: #e0e0e0;
             overflow-x: hidden;
-            min-height: 100vh;
         }
-
-        /* === MATRIX RAIN CANVAS === */
-        #matrix-canvas {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            z-index: 0;
-            opacity: 0.15;
-            pointer-events: none;
+        
+        .glass-panel {
+            background: rgba(17, 17, 17, 0.95);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(0, 255, 204, 0.1);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
         }
-
-        /* === SCANLINE OVERLAY === */
-        .scanlines {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: repeating-linear-gradient(
-                0deg,
-                transparent,
-                transparent 2px,
-                rgba(0, 240, 255, 0.03) 2px,
-                rgba(0, 240, 255, 0.03) 4px
-            );
-            pointer-events: none;
-            z-index: 9999;
-            animation: scanlineMove 8s linear infinite;
-        }
-
-        @keyframes scanlineMove {
-            0% { transform: translateY(0); }
-            100% { transform: translateY(4px); }
-        }
-
-        /* === GLITCH TEXT EFFECT === */
-        .glitch {
+        
+        .cyber-border {
             position: relative;
-            font-family: 'Orbitron', sans-serif;
-            font-weight: 900;
-            text-transform: uppercase;
-            letter-spacing: 4px;
         }
-
-        .glitch::before,
-        .glitch::after {
-            content: attr(data-text);
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-        }
-
-        .glitch::before {
-            left: 2px;
-            text-shadow: -2px 0 var(--neon-pink);
-            clip: rect(24px, 550px, 90px, 0);
-            animation: glitch-anim-1 3s infinite linear alternate-reverse;
-        }
-
-        .glitch::after {
-            left: -2px;
-            text-shadow: -2px 0 var(--neon-green);
-            clip: rect(85px, 550px, 140px, 0);
-            animation: glitch-anim-2 2.5s infinite linear alternate-reverse;
-        }
-
-        @keyframes glitch-anim-1 {
-            0% { clip: rect(20px, 9999px, 15px, 0); }
-            20% { clip: rect(60px, 9999px, 70px, 0); }
-            40% { clip: rect(20px, 9999px, 5px, 0); }
-            60% { clip: rect(80px, 9999px, 50px, 0); }
-            80% { clip: rect(10px, 9999px, 40px, 0); }
-            100% { clip: rect(30px, 9999px, 90px, 0); }
-        }
-
-        @keyframes glitch-anim-2 {
-            0% { clip: rect(65px, 9999px, 100px, 0); }
-            20% { clip: rect(5px, 9999px, 40px, 0); }
-            40% { clip: rect(30px, 9999px, 10px, 0); }
-            60% { clip: rect(90px, 9999px, 80px, 0); }
-            80% { clip: rect(15px, 9999px, 60px, 0); }
-            100% { clip: rect(50px, 9999px, 30px, 0); }
-        }
-
-        /* === LAYOUT === */
-        .container {
-            position: relative;
-            z-index: 1;
-            max-width: 1400px;
-            margin: 0 auto;
-            padding: 20px;
-        }
-
-        /* === HEADER === */
-        header {
-            text-align: center;
-            padding: 40px 20px;
-            border-bottom: 1px solid rgba(0, 240, 255, 0.2);
-            margin-bottom: 30px;
-        }
-
-        .logo {
-            font-size: clamp(2rem, 6vw, 4rem);
-            color: var(--neon-cyan);
-            text-shadow: 0 0 20px var(--neon-cyan), 0 0 40px rgba(0, 240, 255, 0.5);
-        }
-
-        .subtitle {
-            font-size: 0.9rem;
-            color: var(--neon-pink);
-            margin-top: 10px;
-            letter-spacing: 6px;
-            opacity: 0.8;
-        }
-
-        .status-bar {
-            display: flex;
-            justify-content: center;
-            gap: 30px;
-            margin-top: 20px;
-            font-size: 0.75rem;
-            flex-wrap: wrap;
-        }
-
-        .status-item {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-
-        .status-dot {
-            width: 8px;
-            height: 8px;
-            border-radius: 50%;
-            background: var(--neon-green);
-            box-shadow: 0 0 10px var(--neon-green);
-            animation: pulse 2s infinite;
-        }
-
-        @keyframes pulse {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.3; }
-        }
-
-        /* === NAVIGATION TABS === */
-        .nav-tabs {
-            display: flex;
-            justify-content: center;
-            gap: 10px;
-            margin-bottom: 30px;
-            flex-wrap: wrap;
-        }
-
-        .nav-tab {
-            background: transparent;
-            border: 1px solid var(--neon-cyan);
-            color: var(--neon-cyan);
-            padding: 12px 24px;
-            font-family: 'JetBrains Mono', monospace;
-            font-size: 0.85rem;
-            cursor: pointer;
-            transition: all 0.3s;
-            text-transform: uppercase;
-            letter-spacing: 2px;
-            position: relative;
-            overflow: hidden;
-        }
-
-        .nav-tab::before {
+        
+        .cyber-border::before {
             content: '';
             position: absolute;
-            top: 0;
-            left: -100%;
-            width: 100%;
-            height: 100%;
-            background: linear-gradient(90deg, transparent, rgba(0, 240, 255, 0.2), transparent);
-            transition: left 0.5s;
+            top: 0; left: 0; right: 0; bottom: 0;
+            border-radius: inherit;
+            padding: 1px;
+            background: linear-gradient(135deg, #00ffcc, #00ccff, #ff3366);
+            -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+            -webkit-mask-composite: xor;
+            mask-composite: exclude;
+            pointer-events: none;
         }
-
-        .nav-tab:hover::before {
-            left: 100%;
-        }
-
-        .nav-tab:hover, .nav-tab.active {
-            background: rgba(0, 240, 255, 0.1);
-            box-shadow: var(--border-glow);
-            text-shadow: 0 0 10px var(--neon-cyan);
-        }
-
-        .nav-tab.active {
-            border-color: var(--neon-green);
-            color: var(--neon-green);
-        }
-
-        /* === PANELS === */
-        .panel {
-            display: none;
-            background: var(--panel-bg);
-            border: 1px solid rgba(0, 240, 255, 0.2);
-            padding: 30px;
-            margin-bottom: 20px;
-            position: relative;
-            overflow: hidden;
-        }
-
-        .panel::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 2px;
-            background: linear-gradient(90deg, var(--neon-cyan), var(--neon-pink), var(--neon-green));
-            animation: borderGlow 3s linear infinite;
-        }
-
-        @keyframes borderGlow {
-            0% { background-position: 0% 50%; }
-            100% { background-position: 200% 50%; }
-        }
-
-        .panel.active {
-            display: block;
-            animation: panelIn 0.4s ease-out;
-        }
-
-        @keyframes panelIn {
-            from { opacity: 0; transform: translateY(20px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-
-        .panel-title {
-            font-family: 'Orbitron', sans-serif;
-            font-size: 1.3rem;
-            margin-bottom: 20px;
-            color: var(--neon-green);
-            text-shadow: 0 0 10px rgba(0, 255, 65, 0.3);
-        }
-
-        /* === TERMINAL === */
-        .terminal {
-            background: #000;
-            border: 1px solid var(--neon-green);
-            padding: 20px;
-            font-size: 0.85rem;
-            line-height: 1.6;
-            height: 300px;
-            overflow-y: auto;
-            position: relative;
-        }
-
-        .terminal::after {
-            content: '█';
-            animation: blink 1s infinite;
-            color: var(--neon-green);
-        }
-
-        @keyframes blink {
-            0%, 50% { opacity: 1; }
-            51%, 100% { opacity: 0; }
-        }
-
-        .terminal-line {
-            margin-bottom: 4px;
-        }
-
-        .terminal-prompt {
-            color: var(--neon-green);
-        }
-
-        .terminal-output {
-            color: var(--neon-cyan);
-        }
-
-        .terminal-error {
-            color: var(--neon-pink);
-        }
-
-        .terminal-success {
-            color: var(--neon-green);
-        }
-
-        /* === VIDEO REPAIR SECTION === */
+        
         .drop-zone {
-            border: 2px dashed var(--neon-cyan);
-            border-radius: 4px;
-            padding: 60px 20px;
-            text-align: center;
-            cursor: pointer;
-            transition: all 0.3s;
-            background: rgba(0, 240, 255, 0.02);
-            position: relative;
-            overflow: hidden;
+            background: repeating-linear-gradient(
+                45deg,
+                rgba(0, 255, 204, 0.03),
+                rgba(0, 255, 204, 0.03) 10px,
+                rgba(0, 255, 204, 0.06) 10px,
+                rgba(0, 255, 204, 0.06) 20px
+            );
+            border: 2px dashed rgba(0, 255, 204, 0.3);
+            transition: all 0.3s ease;
         }
-
-        .drop-zone:hover, .drop-zone.dragover {
-            border-color: var(--neon-green);
-            background: rgba(0, 255, 65, 0.05);
-            box-shadow: 0 0 30px rgba(0, 255, 65, 0.1);
+        
+        .drop-zone.drag-over {
+            border-color: #00ffcc;
+            background: rgba(0, 255, 204, 0.1);
+            transform: scale(1.02);
         }
-
-        .drop-zone.dragover::before {
-            content: '';
+        
+        .scan-line {
             position: absolute;
             top: 0;
             left: 0;
             right: 0;
-            bottom: 0;
-            background: repeating-linear-gradient(
-                45deg,
-                transparent,
-                transparent 10px,
-                rgba(0, 255, 65, 0.05) 10px,
-                rgba(0, 255, 65, 0.05) 20px
-            );
-            animation: stripeMove 0.5s linear infinite;
-        }
-
-        @keyframes stripeMove {
-            0% { background-position: 0 0; }
-            100% { background-position: 28px 0; }
-        }
-
-        .drop-zone-text {
-            font-size: 1.1rem;
-            color: var(--neon-cyan);
+            height: 2px;
+            background: linear-gradient(90deg, transparent, #00ffcc, transparent);
+            animation: scan 2s linear infinite;
             pointer-events: none;
         }
-
-        .drop-zone-sub {
-            font-size: 0.8rem;
-            color: rgba(0, 240, 255, 0.5);
-            margin-top: 10px;
-            pointer-events: none;
-        }
-
-        .file-info {
-            margin-top: 20px;
-            padding: 15px;
-            background: rgba(0, 240, 255, 0.05);
-            border-left: 3px solid var(--neon-cyan);
-            display: none;
-        }
-
-        .file-info.show {
-            display: block;
-            animation: slideIn 0.3s ease-out;
-        }
-
-        @keyframes slideIn {
-            from { opacity: 0; transform: translateX(-20px); }
-            to { opacity: 1; transform: translateX(0); }
-        }
-
-        .repair-options {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-            gap: 15px;
-            margin: 20px 0;
-        }
-
-        .repair-option {
-            background: rgba(0, 240, 255, 0.03);
-            border: 1px solid rgba(0, 240, 255, 0.2);
-            padding: 15px;
-            cursor: pointer;
-            transition: all 0.3s;
-            position: relative;
-        }
-
-        .repair-option:hover {
-            border-color: var(--neon-green);
-            background: rgba(0, 255, 65, 0.05);
-        }
-
-        .repair-option.selected {
-            border-color: var(--neon-green);
-            background: rgba(0, 255, 65, 0.1);
-            box-shadow: 0 0 15px rgba(0, 255, 65, 0.2);
-        }
-
-        .repair-option-title {
-            font-family: 'Orbitron', sans-serif;
-            font-size: 0.9rem;
-            color: var(--neon-cyan);
-            margin-bottom: 5px;
-        }
-
-        .repair-option-desc {
-            font-size: 0.75rem;
-            color: rgba(0, 240, 255, 0.6);
-        }
-
-        .btn {
-            background: transparent;
-            border: 1px solid var(--neon-cyan);
-            color: var(--neon-cyan);
-            padding: 14px 32px;
-            font-family: 'JetBrains Mono', monospace;
-            font-size: 0.9rem;
-            cursor: pointer;
-            transition: all 0.3s;
+        
+        .btn-cyber {
+            background: linear-gradient(135deg, #00ffcc, #00ccff);
+            color: #0a0a0a;
+            font-weight: 700;
             text-transform: uppercase;
-            letter-spacing: 2px;
+            letter-spacing: 1px;
+            transition: all 0.3s ease;
             position: relative;
             overflow: hidden;
         }
-
-        .btn:hover {
-            background: rgba(0, 240, 255, 0.1);
-            box-shadow: var(--border-glow);
-            text-shadow: 0 0 10px var(--neon-cyan);
+        
+        .btn-cyber:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 30px rgba(0, 255, 204, 0.3);
         }
-
-        .btn:disabled {
-            opacity: 0.3;
-            cursor: not-allowed;
+        
+        .btn-cyber:active {
+            transform: translateY(0);
         }
-
-        .btn-primary {
-            border-color: var(--neon-green);
-            color: var(--neon-green);
+        
+        .btn-cyber::after {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: linear-gradient(45deg, transparent, rgba(255,255,255,0.3), transparent);
+            transform: rotate(45deg);
+            transition: all 0.5s;
         }
-
-        .btn-primary:hover {
-            background: rgba(0, 255, 65, 0.1);
-            box-shadow: 0 0 20px rgba(0, 255, 65, 0.3);
+        
+        .btn-cyber:hover::after {
+            left: 100%;
         }
-
+        
         .progress-bar {
-            width: 100%;
-            height: 4px;
-            background: rgba(0, 240, 255, 0.1);
-            margin: 20px 0;
-            position: relative;
-            overflow: hidden;
-            display: none;
+            background: linear-gradient(90deg, #00ffcc, #00ccff);
+            box-shadow: 0 0 10px rgba(0, 255, 204, 0.5);
         }
-
-        .progress-bar.show {
-            display: block;
-        }
-
-        .progress-fill {
-            height: 100%;
-            background: linear-gradient(90deg, var(--neon-cyan), var(--neon-green));
-            width: 0%;
-            transition: width 0.3s;
-            box-shadow: 0 0 10px var(--neon-green);
-        }
-
-        .progress-text {
-            text-align: center;
-            font-size: 0.8rem;
-            color: var(--neon-green);
-            margin-top: 10px;
-            display: none;
-        }
-
-        .progress-text.show {
-            display: block;
-        }
-
-        /* === HEX DUMP VISUALIZER === */
-        .hex-viewer {
-            background: #000;
-            border: 1px solid var(--neon-pink);
-            padding: 15px;
-            font-size: 0.75rem;
-            height: 200px;
-            overflow-y: auto;
-            font-family: 'JetBrains Mono', monospace;
-            line-height: 1.8;
-            display: none;
-        }
-
-        .hex-viewer.show {
-            display: block;
-        }
-
-        .hex-offset {
-            color: var(--neon-yellow);
-            margin-right: 15px;
-        }
-
-        .hex-byte {
-            color: var(--neon-cyan);
-            margin-right: 4px;
-        }
-
-        .hex-ascii {
-            color: rgba(0, 240, 255, 0.5);
-            margin-left: 15px;
-        }
-
-        /* === DASHBOARD GRID === */
-        .dashboard-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-            gap: 20px;
-        }
-
-        .dash-card {
-            background: rgba(0, 240, 255, 0.03);
-            border: 1px solid rgba(0, 240, 255, 0.15);
-            padding: 25px;
-            position: relative;
-            overflow: hidden;
-            transition: all 0.3s;
-        }
-
-        .dash-card:hover {
-            border-color: var(--neon-cyan);
-            transform: translateY(-3px);
-            box-shadow: 0 10px 30px rgba(0, 240, 255, 0.1);
-        }
-
-        .dash-card-icon {
-            font-size: 2rem;
-            margin-bottom: 15px;
-        }
-
-        .dash-card-title {
-            font-family: 'Orbitron', sans-serif;
-            font-size: 1rem;
-            color: var(--neon-cyan);
-            margin-bottom: 8px;
-        }
-
-        .dash-card-value {
-            font-size: 1.8rem;
-            color: var(--neon-green);
-            text-shadow: 0 0 10px rgba(0, 255, 65, 0.3);
-        }
-
-        .dash-card-label {
-            font-size: 0.75rem;
-            color: rgba(0, 240, 255, 0.5);
-            margin-top: 5px;
-        }
-
-        /* === FOOTER === */
-        footer {
-            text-align: center;
-            padding: 30px;
-            border-top: 1px solid rgba(0, 240, 255, 0.1);
-            margin-top: 40px;
-            font-size: 0.75rem;
-            color: rgba(0, 240, 255, 0.3);
-        }
-
-        /* === SCROLLBAR === */
-        ::-webkit-scrollbar {
-            width: 8px;
-        }
-
-        ::-webkit-scrollbar-track {
-            background: var(--dark-bg);
-        }
-
-        ::-webkit-scrollbar-thumb {
-            background: var(--neon-cyan);
-            border-radius: 4px;
-        }
-
-        ::-webkit-scrollbar-thumb:hover {
-            background: var(--neon-green);
-        }
-
-        /* === RESPONSIVE === */
-        @media (max-width: 768px) {
-            .nav-tabs {
-                flex-direction: column;
-                align-items: center;
-            }
-            
-            .nav-tab {
-                width: 100%;
-                max-width: 300px;
-            }
-            
-            .repair-options {
-                grid-template-columns: 1fr;
-            }
-        }
-
-        /* === LOADING SPINNER === */
-        .spinner {
-            display: inline-block;
-            width: 20px;
-            height: 20px;
-            border: 2px solid rgba(0, 240, 255, 0.3);
-            border-top-color: var(--neon-cyan);
-            border-radius: 50%;
-            animation: spin 1s linear infinite;
-            margin-right: 10px;
-            vertical-align: middle;
-        }
-
-        @keyframes spin {
-            to { transform: rotate(360deg); }
-        }
-
-        /* === TOAST NOTIFICATION === */
-        .toast {
-            position: fixed;
-            bottom: 30px;
-            right: 30px;
-            background: var(--panel-bg);
-            border: 1px solid var(--neon-green);
-            padding: 15px 25px;
-            color: var(--neon-green);
+        
+        .log-entry {
+            border-left: 2px solid #00ffcc;
+            padding-left: 12px;
+            margin: 4px 0;
             font-size: 0.85rem;
-            z-index: 10000;
-            transform: translateX(400px);
-            transition: transform 0.4s ease-out;
-            box-shadow: 0 0 20px rgba(0, 255, 65, 0.2);
+            opacity: 0;
+            animation: fadeIn 0.3s forwards;
         }
-
-        .toast.show {
-            transform: translateX(0);
+        
+        @keyframes fadeIn {
+            to { opacity: 1; }
         }
-
-        .toast.error {
-            border-color: var(--neon-pink);
-            color: var(--neon-pink);
-            box-shadow: 0 0 20px rgba(255, 0, 160, 0.2);
-        }
-
-        /* === HIDDEN FILE INPUT === */
-        #fileInput {
-            display: none;
-        }
-
-        /* === VIDEO PREVIEW === */
+        
+        .log-entry.error { border-left-color: #ff3366; color: #ff3366; }
+        .log-entry.warn { border-left-color: #ffaa00; color: #ffaa00; }
+        .log-entry.success { border-left-color: #00ff88; color: #00ff88; }
+        
         .video-preview {
-            width: 100%;
-            max-width: 600px;
-            margin: 20px auto;
-            border: 1px solid var(--neon-cyan);
-            display: none;
+            background: #000;
+            border-radius: 8px;
+            overflow: hidden;
         }
-
-        .video-preview.show {
-            display: block;
+        
+        .mode-card {
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border: 1px solid rgba(255,255,255,0.05);
         }
-
-        .video-preview video {
-            width: 100%;
-            display: block;
+        
+        .mode-card:hover, .mode-card.active {
+            border-color: #00ffcc;
+            background: rgba(0, 255, 204, 0.05);
         }
-
-        /* === DOWNLOAD LINK === */
-        .download-link {
-            display: inline-block;
-            margin-top: 15px;
-            padding: 10px 20px;
-            background: rgba(0, 255, 65, 0.1);
-            border: 1px solid var(--neon-green);
-            color: var(--neon-green);
-            text-decoration: none;
-            font-size: 0.85rem;
-            transition: all 0.3s;
+        
+        .mode-card.active {
+            box-shadow: 0 0 20px rgba(0, 255, 204, 0.1);
         }
-
-        .download-link:hover {
-            background: rgba(0, 255, 65, 0.2);
-            box-shadow: 0 0 15px rgba(0, 255, 65, 0.3);
+        
+        /* Mobile optimizations */
+        @media (max-width: 768px) {
+            .container-padding { padding: 1rem; }
+            .title-text { font-size: 1.5rem; }
+        }
+        
+        @media (min-width: 769px) {
+            .container-padding { padding: 2rem; }
+            .title-text { font-size: 2.5rem; }
+        }
+        
+        .scrollbar-hide::-webkit-scrollbar { display: none; }
+        .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
+        
+        .hex-bg {
+            background-image: radial-gradient(circle at 1px 1px, rgba(0,255,204,0.05) 1px, transparent 0);
+            background-size: 20px 20px;
         }
     </style>
 </head>
-<body>
-
-    <canvas id="matrix-canvas"></canvas>
-    <div class="scanlines"></div>
-
-    <div class="container">
-        <!-- HEADER -->
-        <header>
-            <h1 class="logo glitch" data-text="NANOXYIN">NANOXYIN</h1>
-            <p class="subtitle">// SYSTEME DE PENETRATION TESTING AVANCE //</p>
-            <div class="status-bar">
-                <div class="status-item">
-                    <span class="status-dot"></span>
-                    <span>SYSTEM ONLINE</span>
+<body class="hex-bg min-h-screen">
+    <!-- Header -->
+    <header class="glass-panel sticky top-0 z-50 border-b border-cyber-accent/10">
+        <div class="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-lg bg-gradient-to-br from-cyber-accent to-cyber-info flex items-center justify-center">
+                    <i class="fas fa-tools text-cyber-dark text-lg"></i>
                 </div>
-                <div class="status-item">
-                    <span class="status-dot" style="background: var(--neon-cyan); box-shadow: 0 0 10px var(--neon-cyan);"></span>
-                    <span>FFMPEG.WASM: <span id="ffmpeg-status">LOADING...</span></span>
-                </div>
-                <div class="status-item">
-                    <span class="status-dot" style="background: var(--neon-pink); box-shadow: 0 0 10px var(--neon-pink);"></span>
-                    <span id="clock">00:00:00</span>
+                <div>
+                    <h1 class="title-text font-bold text-white tracking-tight">NanoXyin <span class="text-cyber-accent">V1D30R3P41R</span></h1>
+                    <p class="text-xs text-gray-500 mono hidden sm:block">v2.0.1 | ffmpeg.wasm | client-side processing</p>
                 </div>
             </div>
-        </header>
-
-        <!-- NAVIGATION -->
-        <div class="nav-tabs">
-            <button class="nav-tab active" onclick="switchTab('dashboard')">Dashboard</button>
-            <button class="nav-tab" onclick="switchTab('video')">Video Repair</button>
-            <button class="nav-tab" onclick="switchTab('terminal')">Terminal</button>
-            <button class="nav-tab" onclick="switchTab('about')">About</button>
-        </div>
-
-        <!-- DASHBOARD PANEL -->
-        <div id="panel-dashboard" class="panel active">
-            <h2 class="panel-title">> DASHBOARD_OVERVIEW</h2>
-            <div class="dashboard-grid">
-                <div class="dash-card">
-                    <div class="dash-card-icon">🔧</div>
-                    <div class="dash-card-title">VIDEO_REPAIRED</div>
-                    <div class="dash-card-value" id="stat-repaired">0</div>
-                    <div class="dash-card-label">Files processed successfully</div>
-                </div>
-                <div class="dash-card">
-                    <div class="dash-card-icon">⚡</div>
-                    <div class="dash-card-title">SYSTEM_LOAD</div>
-                    <div class="dash-card-value" id="stat-load">0%</div>
-                    <div class="dash-card-label">Current CPU utilization</div>
-                </div>
-                <div class="dash-card">
-                    <div class="dash-card-icon">🎯</div>
-                    <div class="dash-card-title">UPTIME</div>
-                    <div class="dash-card-value" id="stat-uptime">00:00</div>
-                    <div class="dash-card-label">Session duration</div>
-                </div>
-                <div class="dash-card">
-                    <div class="dash-card-icon">🔒</div>
-                    <div class="dash-card-title">TRUST_MODE</div>
-                    <div class="dash-card-value" style="color: var(--neon-pink);">ACTIVE</div>
-                    <div class="dash-card-label">Full authorization granted</div>
-                </div>
-            </div>
-        </div>
-
-        <!-- VIDEO REPAIR PANEL -->
-        <div id="panel-video" class="panel">
-            <h2 class="panel-title">> VIDEO_CORRUPTION_REPAIR_MODULE</h2>
-            
-            <div class="drop-zone" id="dropZone" onclick="document.getElementById('fileInput').click()">
-                <div class="drop-zone-text">[ DROP CORRUPTED VIDEO FILE HERE ]</div>
-                <div class="drop-zone-sub">or click to browse | Supports: MP4, AVI, MKV, MOV, FLV, WMV</div>
-            </div>
-            
-            <input type="file" id="fileInput" accept="video/*" onchange="handleFileSelect(event)">
-            
-            <div class="file-info" id="fileInfo">
-                <strong>File:</strong> <span id="fileName"></span><br>
-                <strong>Size:</strong> <span id="fileSize"></span><br>
-                <strong>Type:</strong> <span id="fileType"></span><br>
-                <strong>Status:</strong> <span id="fileStatus" style="color: var(--neon-yellow);">READY_FOR_REPAIR</span>
-            </div>
-
-            <div class="repair-options" id="repairOptions" style="display: none;">
-                <div class="repair-option selected" onclick="selectRepairMode(this, 'remux')">
-                    <div class="repair-option-title">REMUX & REPAIR</div>
-                    <div class="repair-option-desc">Copy streams to new container, fix headers and metadata corruption. Fastest method.</div>
-                </div>
-                <div class="repair-option" onclick="selectRepairMode(this, 'reencode')">
-                    <div class="repair-option-title">RE-ENCODE FULL</div>
-                    <div class="repair-option-desc">Full re-encode with H.264/H.265. Fixes deep corruption but slower. Best quality recovery.</div>
-                </div>
-                <div class="repair-option" onclick="selectRepairMode(this, 'extract')">
-                    <div class="repair-option-title">FRAME EXTRACTION</div>
-                    <div class="repair-option-desc">Extract all recoverable frames as images. Useful for severely damaged files.</div>
-                </div>
-                <div class="repair-option" onclick="selectRepairMode(this, 'audio')">
-                    <div class="repair-option-title">AUDIO RECOVERY</div>
-                    <div class="repair-option-desc">Extract and repair audio stream only. Separates audio from corrupted video track.</div>
-                </div>
-            </div>
-
-            <div style="text-align: center; margin-top: 20px;">
-                <button class="btn btn-primary" id="repairBtn" onclick="startRepair()" disabled>
-                    <span id="btnText">INITIATE REPAIR SEQUENCE</span>
+            <div class="flex items-center gap-2">
+                <span id="statusIndicator" class="px-3 py-1 rounded-full text-xs font-bold bg-yellow-500/20 text-yellow-400 border border-yellow-500/30 mono">
+                    <i class="fas fa-circle text-[8px] mr-1 animate-pulse"></i>INIT
+                </span>
+                <button onclick="toggleTheme()" class="w-9 h-9 rounded-lg bg-cyber-panel border border-white/10 flex items-center justify-center hover:border-cyber-accent transition-colors">
+                    <i class="fas fa-moon text-gray-400"></i>
                 </button>
             </div>
-
-            <div class="progress-bar" id="progressBar">
-                <div class="progress-fill" id="progressFill"></div>
-            </div>
-            <div class="progress-text" id="progressText">Initializing FFmpeg.wasm...</div>
-
-            <div class="hex-viewer" id="hexViewer"></div>
-
-            <div class="video-preview" id="videoPreview">
-                <video id="previewVideo" controls></video>
-            </div>
-
-            <div id="downloadContainer" style="text-align: center; margin-top: 20px;"></div>
         </div>
+    </header>
 
-        <!-- TERMINAL PANEL -->
-        <div id="panel-terminal" class="panel">
-            <h2 class="panel-title">> SYSTEM_TERMINAL</h2>
-            <div class="terminal" id="terminal">
-                <div class="terminal-line">
-                    <span class="terminal-prompt">root@nanoxyin:~$</span>
-                    <span class="terminal-output"> ./init_system.sh --mode=penetration_testing</span>
+    <main class="max-w-7xl mx-auto container-padding space-y-6">
+        <!-- Hero Section -->
+        <div class="text-center py-8 md:py-12 relative overflow-hidden rounded-2xl glass-panel cyber-border">
+            <div class="scan-line"></div>
+            <div class="relative z-10 px-4">
+                <div class="inline-flex items-center gap-2 px-4 py-1 rounded-full bg-cyber-accent/10 border border-cyber-accent/20 text-cyber-accent text-sm mb-4 mono">
+                    <i class="fas fa-shield-alt"></i>
+                    100% CLIENT-SIDE | NO UPLOAD | NO SERVER
                 </div>
-                <div class="terminal-line terminal-success">[OK] NanoXyin System v4.2.0 initialized</div>
-                <div class="terminal-line terminal-success">[OK] FFmpeg.wasm core loading...</div>
-                <div class="terminal-line terminal-success">[OK] Trust mode: FULL_AUTHORIZATION</div>
-                <div class="terminal-line terminal-success">[OK] Matrix rain renderer: ACTIVE</div>
-                <div class="terminal-line">
-                    <span class="terminal-prompt">root@nanoxyin:~$</span>
-                    <span class="terminal-output"> _</span>
-                </div>
-            </div>
-        </div>
-
-        <!-- ABOUT PANEL -->
-        <div id="panel-about" class="panel">
-            <h2 class="panel-title">> SYSTEM_INFORMATION</h2>
-            <div style="line-height: 2; font-size: 0.9rem;">
-                <p><span style="color: var(--neon-pink);">Name:</span> NanoXyin Cyber Systems</p>
-                <p><span style="color: var(--neon-pink);">Version:</span> 4.2.0-ALPHA</p>
-                <p><span style="color: var(--neon-pink);">Purpose:</span> Advanced Penetration Testing & Digital Forensics</p>
-                <p><span style="color: var(--neon-pink);">Core:</span> FFmpeg.wasm (WebAssembly) for client-side video processing</p>
-                <p><span style="color: var(--neon-pink);">Architecture:</span> Single-file, zero-backend, fully client-side</p>
-                <p><span style="color: var(--neon-pink);">Language:</span> EN/ID/JP/RU/DE + l33t + Morse</p>
-                <br>
-                <p style="color: var(--neon-green);">- .... . / .... .- -.-. -.- / .. ... / .-. . .- .-..</p>
-                <p style="color: rgba(0, 240, 255, 0.5); font-size: 0.8rem; margin-top: 10px;">
-                    All operations performed locally in browser. No data uploaded to any server.
+                <h2 class="text-2xl md:text-4xl font-bold mb-3">
+                    Perbaiki Video <span class="text-cyber-accent">Corrupted</span> & <span class="text-cyber-warn">Damaged</span>
+                </h2>
+                <p class="text-gray-400 max-w-2xl mx-auto text-sm md:text-base">
+                    Repair video files dengan teknik remuxing, re-encoding, frame extraction, dan error recovery. 
+                    Semua proses di browser — file tidak pernah keluar dari device.
                 </p>
             </div>
         </div>
 
-        <footer>
-            <p>NanoXyin Systems // 2026 // Keine Grenzen, nur Code</p>
-            <p style="margin-top: 5px; font-size: 0.7rem;">Built for cybersecurity professionals. Use responsibly.</p>
-        </footer>
-    </div>
+        <!-- Repair Modes -->
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div class="mode-card active glass-panel rounded-xl p-4" onclick="selectMode('remux')" id="mode-remux">
+                <div class="w-12 h-12 rounded-lg bg-cyber-accent/10 flex items-center justify-center mb-3">
+                    <i class="fas fa-sync-alt text-cyber-accent text-xl"></i>
+                </div>
+                <h3 class="font-bold text-white mb-1">Quick Remux</h3>
+                <p class="text-xs text-gray-500">Copy streams tanpa re-encode. Fast & lossless untuk container corruption.</p>
+            </div>
+            
+            <div class="mode-card glass-panel rounded-xl p-4" onclick="selectMode('reencode')" id="mode-reencode">
+                <div class="w-12 h-12 rounded-lg bg-cyber-info/10 flex items-center justify-center mb-3">
+                    <i class="fas fa-compress text-cyber-info text-xl"></i>
+                </div>
+                <h3 class="font-bold text-white mb-1">Re-encode</h3>
+                <p class="text-xs text-gray-500">Full re-encode dengan error correction. Fix stream corruption.</p>
+            </div>
+            
+            <div class="mode-card glass-panel rounded-xl p-4" onclick="selectMode('extract')" id="mode-extract">
+                <div class="w-12 h-12 rounded-lg bg-purple-500/10 flex items-center justify-center mb-3">
+                    <i class="fas fa-film text-purple-400 text-xl"></i>
+                </div>
+                <h3 class="font-bold text-white mb-1">Frame Extract</h3>
+                <p class="text-xs text-gray-500">Extract frames dari video damaged, reassemble jadi video baru.</p>
+            </div>
+            
+            <div class="mode-card glass-panel rounded-xl p-4" onclick="selectMode('audio')" id="mode-audio">
+                <div class="w-12 h-12 rounded-lg bg-orange-500/10 flex items-center justify-center mb-3">
+                    <i class="fas fa-music text-orange-400 text-xl"></i>
+                </div>
+                <h3 class="font-bold text-white mb-1">Audio Recovery</h3>
+                <p class="text-xs text-gray-500">Extract audio stream saja dari video corrupted.</p>
+            </div>
+        </div>
 
-    <div class="toast" id="toast"></div>
+        <!-- File Drop Zone -->
+        <div class="glass-panel rounded-2xl p-1 cyber-border">
+            <div 
+                id="dropZone"
+                class="drop-zone rounded-xl p-8 md:p-12 text-center cursor-pointer relative overflow-hidden"
+                onclick="document.getElementById('fileInput').click()"
+                ondragover="handleDragOver(event)"
+                ondragleave="handleDragLeave(event)"
+                ondrop="handleDrop(event)"
+            >
+                <input type="file" id="fileInput" class="hidden" accept="video/*" onchange="handleFileSelect(event)">
+                <div class="relative z-10">
+                    <div class="w-20 h-20 mx-auto mb-4 rounded-2xl bg-cyber-accent/10 border border-cyber-accent/20 flex items-center justify-center">
+                        <i class="fas fa-cloud-upload-alt text-cyber-accent text-3xl"></i>
+                    </div>
+                    <h3 class="text-xl font-bold mb-2">Drop Video File Disini</h3>
+                    <p class="text-gray-400 text-sm mb-4">atau klik untuk browse</p>
+                    <div class="flex flex-wrap justify-center gap-2 text-xs text-gray-500 mono">
+                        <span class="px-2 py-1 rounded bg-cyber-panel border border-white/5">MP4</span>
+                        <span class="px-2 py-1 rounded bg-cyber-panel border border-white/5">MOV</span>
+                        <span class="px-2 py-1 rounded bg-cyber-panel border border-white/5">AVI</span>
+                        <span class="px-2 py-1 rounded bg-cyber-panel border border-white/5">MKV</span>
+                        <span class="px-2 py-1 rounded bg-cyber-panel border border-white/5">WEBM</span>
+                        <span class="px-2 py-1 rounded bg-cyber-panel border border-white/5">M4V</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- File Info & Preview -->
+        <div id="fileInfoSection" class="hidden space-y-4">
+            <div class="glass-panel rounded-2xl p-6 cyber-border">
+                <div class="flex flex-col md:flex-row gap-6">
+                    <!-- File Details -->
+                    <div class="flex-1 space-y-4">
+                        <div class="flex items-center justify-between">
+                            <h3 class="font-bold text-lg"><i class="fas fa-file-video text-cyber-accent mr-2"></i>File Details</h3>
+                            <button onclick="clearFile()" class="text-cyber-warn hover:text-red-400 text-sm">
+                                <i class="fas fa-trash mr-1"></i>Clear
+                            </button>
+                        </div>
+                        
+                        <div class="grid grid-cols-2 gap-3 text-sm">
+                            <div class="bg-cyber-panel rounded-lg p-3 border border-white/5">
+                                <p class="text-gray-500 text-xs mb-1">FILENAME</p>
+                                <p id="fileName" class="font-mono text-cyber-accent truncate">-</p>
+                            </div>
+                            <div class="bg-cyber-panel rounded-lg p-3 border border-white/5">
+                                <p class="text-gray-500 text-xs mb-1">SIZE</p>
+                                <p id="fileSize" class="font-mono text-white">-</p>
+                            </div>
+                            <div class="bg-cyber-panel rounded-lg p-3 border border-white/5">
+                                <p class="text-gray-500 text-xs mb-1">TYPE</p>
+                                <p id="fileType" class="font-mono text-white">-</p>
+                            </div>
+                            <div class="bg-cyber-panel rounded-lg p-3 border border-white/5">
+                                <p class="text-gray-500 text-xs mb-1">DURATION</p>
+                                <p id="fileDuration" class="font-mono text-white">-</p>
+                            </div>
+                        </div>
+
+                        <!-- Options -->
+                        <div class="space-y-3 pt-2">
+                            <h4 class="font-bold text-sm text-gray-300">Repair Options</h4>
+                            
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                <div>
+                                    <label class="text-xs text-gray-500 mb-1 block">Output Format</label>
+                                    <select id="outputFormat" class="w-full bg-cyber-panel border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:border-cyber-accent focus:outline-none">
+                                        <option value="mp4">MP4 (H.264 + AAC)</option>
+                                        <option value="mkv">MKV (Copy Streams)</option>
+                                        <option value="mov">MOV (ProRes Compatible)</option>
+                                        <option value="webm">WebM (VP9 + Opus)</option>
+                                        <option value="avi">AVI (Legacy)</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="text-xs text-gray-500 mb-1 block">Quality Preset</label>
+                                    <select id="qualityPreset" class="w-full bg-cyber-panel border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:border-cyber-accent focus:outline-none">
+                                        <option value="ultrafast">Ultra Fast (Lower Quality)</option>
+                                        <option value="fast" selected>Fast (Balanced)</option>
+                                        <option value="medium">Medium (Good Quality)</option>
+                                        <option value="slow">Slow (Best Quality)</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div class="flex items-center gap-4 flex-wrap">
+                                <label class="flex items-center gap-2 cursor-pointer">
+                                    <input type="checkbox" id="ignoreUnknown" checked class="w-4 h-4 rounded border-white/20 bg-cyber-panel text-cyber-accent focus:ring-cyber-accent">
+                                    <span class="text-sm text-gray-300">Ignore Unknown Streams</span>
+                                </label>
+                                <label class="flex items-center gap-2 cursor-pointer">
+                                    <input type="checkbox" id="fixTimestamps" checked class="w-4 h-4 rounded border-white/20 bg-cyber-panel text-cyber-accent focus:ring-cyber-accent">
+                                    <span class="text-sm text-gray-300">Fix Timestamps</span>
+                                </label>
+                                <label class="flex items-center gap-2 cursor-pointer">
+                                    <input type="checkbox" id="recoverFrames" class="w-4 h-4 rounded border-white/20 bg-cyber-panel text-cyber-accent focus:ring-cyber-accent">
+                                    <span class="text-sm text-gray-300">Recover Frames</span>
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Video Preview -->
+                    <div class="w-full md:w-80 flex-shrink-0">
+                        <h3 class="font-bold text-sm mb-3 text-gray-300">Preview</h3>
+                        <div class="video-preview aspect-video relative bg-black rounded-xl overflow-hidden border border-white/10">
+                            <video id="videoPreview" class="w-full h-full object-contain" controls></video>
+                            <div id="previewPlaceholder" class="absolute inset-0 flex items-center justify-center text-gray-600">
+                                <i class="fas fa-film text-4xl"></i>
+                            </div>
+                        </div>
+                        <p class="text-xs text-gray-500 mt-2 text-center mono">Original file preview</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Action Button -->
+            <button id="repairBtn" onclick="startRepair()" class="btn-cyber w-full py-4 rounded-xl text-lg font-bold flex items-center justify-center gap-3">
+                <i class="fas fa-wrench"></i>
+                START REPAIR PROCESS
+            </button>
+        </div>
+
+        <!-- Progress Section -->
+        <div id="progressSection" class="hidden glass-panel rounded-2xl p-6 cyber-border">
+            <div class="flex items-center justify-between mb-4">
+                <h3 class="font-bold text-lg"><i class="fas fa-cogs text-cyber-accent mr-2"></i>Processing</h3>
+                <span id="progressPercent" class="text-2xl font-bold text-cyber-accent mono">0%</span>
+            </div>
+            
+            <div class="w-full h-3 bg-cyber-panel rounded-full overflow-hidden border border-white/10 mb-4">
+                <div id="progressBar" class="progress-bar h-full rounded-full transition-all duration-300" style="width: 0%"></div>
+            </div>
+            
+            <div class="flex items-center justify-between text-xs text-gray-500 mono mb-4">
+                <span id="progressStatus">Initializing...</span>
+                <span id="progressTime">00:00</span>
+            </div>
+
+            <!-- Terminal Log -->
+            <div class="bg-black rounded-xl p-4 font-mono text-xs h-64 overflow-y-auto scrollbar-hide border border-white/10" id="terminalLog">
+                <div class="text-cyber-accent mb-2">=== NanoXyin Video Repair Engine v2.0.1 ===</div>
+                <div class="text-gray-500 mb-2">[- .... . / .... .- -.-. -.- / .. ... / .-. . .- .-..]</div>
+            </div>
+
+            <button id="cancelBtn" onclick="cancelRepair()" class="mt-4 w-full py-3 rounded-xl border border-cyber-warn/30 text-cyber-warn hover:bg-cyber-warn/10 transition-colors font-bold">
+                <i class="fas fa-stop mr-2"></i>CANCEL OPERATION
+            </button>
+        </div>
+
+        <!-- Result Section -->
+        <div id="resultSection" class="hidden glass-panel rounded-2xl p-6 cyber-border">
+            <div class="text-center mb-6">
+                <div class="w-16 h-16 mx-auto mb-3 rounded-full bg-green-500/10 border border-green-500/30 flex items-center justify-center">
+                    <i class="fas fa-check text-green-400 text-2xl"></i>
+                </div>
+                <h3 class="text-2xl font-bold text-white mb-1">Repair Complete!</h3>
+                <p class="text-gray-400 text-sm">Video berhasil diperbaiki dan siap di-download</p>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                <div class="bg-cyber-panel rounded-xl p-4 border border-white/5">
+                    <p class="text-gray-500 text-xs mb-1">ORIGINAL SIZE</p>
+                    <p id="resultOriginalSize" class="font-mono text-white text-lg">-</p>
+                </div>
+                <div class="bg-cyber-panel rounded-xl p-4 border border-white/5">
+                    <p class="text-gray-500 text-xs mb-1">REPAIRED SIZE</p>
+                    <p id="resultRepairedSize" class="font-mono text-cyber-accent text-lg">-</p>
+                </div>
+                <div class="bg-cyber-panel rounded-xl p-4 border border-white/5">
+                    <p class="text-gray-500 text-xs mb-1">PROCESS TIME</p>
+                    <p id="resultProcessTime" class="font-mono text-white text-lg">-</p>
+                </div>
+                <div class="bg-cyber-panel rounded-xl p-4 border border-white/5">
+                    <p class="text-gray-500 text-xs mb-1">OUTPUT FORMAT</p>
+                    <p id="resultFormat" class="font-mono text-white text-lg">-</p>
+                </div>
+            </div>
+
+            <div class="video-preview aspect-video mb-6 bg-black rounded-xl overflow-hidden border border-cyber-accent/20">
+                <video id="resultPreview" class="w-full h-full object-contain" controls></video>
+            </div>
+
+            <div class="flex flex-col sm:flex-row gap-3">
+                <a id="downloadBtn" href="#" download class="btn-cyber flex-1 py-4 rounded-xl text-center font-bold flex items-center justify-center gap-2">
+                    <i class="fas fa-download"></i>
+                    DOWNLOAD REPAIRED VIDEO
+                </a>
+                <button onclick="resetApp()" class="flex-1 py-4 rounded-xl border border-white/10 hover:border-cyber-accent/50 hover:bg-cyber-accent/5 transition-all font-bold text-gray-300">
+                    <i class="fas fa-redo mr-2"></i>REPAIR ANOTHER
+                </button>
+            </div>
+        </div>
+
+        <!-- Tips Section -->
+        <div class="glass-panel rounded-2xl p-6 cyber-border">
+            <h3 class="font-bold text-lg mb-4"><i class="fas fa-lightbulb text-yellow-400 mr-2"></i>Tips & Info</h3>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+                <div class="space-y-2">
+                    <h4 class="font-bold text-cyber-accent">Quick Remux</h4>
+                    <p class="text-gray-400">Cocok untuk file dengan container corruption (header rusak, index missing). Fast & lossless.</p>
+                </div>
+                <div class="space-y-2">
+                    <h4 class="font-bold text-cyber-info">Re-encode</h4>
+                    <p class="text-gray-400">Full decode + re-encode. Fix stream-level corruption, glitches, dan artifact.</p>
+                </div>
+                <div class="space-y-2">
+                    <h4 class="font-bold text-purple-400">Frame Extract</h4>
+                    <p class="text-gray-400">Extract frames yang masih readable, reassemble jadi video baru. Last resort untuk file heavily damaged.</p>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="max-w-7xl mx-auto px-4 py-6 text-center text-xs text-gray-600 mono">
+        <p>NanoXyin Video Repair System | ffmpeg.wasm v0.12 | Client-Side Processing</p>
+        <p class="mt-1">No files uploaded to any server. All processing happens locally in your browser.</p>
+    </footer>
 
     <script>
-        // ==================== GLOBAL STATE ====================
-        let selectedFile = null;
-        let repairMode = 'remux';
+        // ===== GLOBAL STATE =====
+        let currentFile = null;
+        let currentMode = 'remux';
         let ffmpeg = null;
-        let ffmpegLoaded = false;
-        let sessionStart = Date.now();
-        let repairedCount = parseInt(localStorage.getItem('nanoxyin_repaired') || '0');
+        let isProcessing = false;
+        let startTime = null;
+        let abortController = null;
 
-        // ==================== MATRIX RAIN ====================
-        const canvas = document.getElementById('matrix-canvas');
-        const ctx = canvas.getContext('2d');
-
-        function resizeCanvas() {
-            canvas.width = window.innerWidth;
-            canvas.height = window.innerHeight;
-        }
-        resizeCanvas();
-        window.addEventListener('resize', resizeCanvas);
-
-        const chars = 'ﾊﾐﾋｰｳｼﾅﾓﾆｻﾜﾂｵﾘｱﾎﾃﾏｹﾒｴｶｷﾑﾕﾗｾﾈｽﾀﾇﾍ0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ';
-        const fontSize = 14;
-        const columns = Math.floor(canvas.width / fontSize);
-        const drops = Array(columns).fill(1);
-
-        function drawMatrix() {
-            ctx.fillStyle = 'rgba(5, 5, 5, 0.05)';
-            ctx.fillRect(0, 0, canvas.width, canvas.height);
-            
-            ctx.fillStyle = '#00f0ff';
-            ctx.font = fontSize + 'px monospace';
-            
-            for (let i = 0; i < drops.length; i++) {
-                const text = chars[Math.floor(Math.random() * chars.length)];
-                ctx.fillText(text, i * fontSize, drops[i] * fontSize);
-                
-                if (drops[i] * fontSize > canvas.height && Math.random() > 0.975) {
-                    drops[i] = 0;
-                }
-                drops[i]++;
-            }
-        }
-        setInterval(drawMatrix, 35);
-
-        // ==================== CLOCK & UPTIME ====================
-        function updateClock() {
-            const now = new Date();
-            document.getElementById('clock').textContent = now.toLocaleTimeString('en-US', { hour12: false });
-            
-            const elapsed = Math.floor((Date.now() - sessionStart) / 1000);
-            const mins = Math.floor(elapsed / 60).toString().padStart(2, '0');
-            const secs = (elapsed % 60).toString().padStart(2, '0');
-            document.getElementById('stat-uptime').textContent = `${mins}:${secs}`;
-            
-            // Simulate system load
-            document.getElementById('stat-load').textContent = Math.floor(Math.random() * 30 + 10) + '%';
-        }
-        setInterval(updateClock, 1000);
-
-        // ==================== TAB SWITCHING ====================
-        function switchTab(tabName) {
-            document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
-            document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
-            
-            event.target.classList.add('active');
-            document.getElementById(`panel-${tabName}`).classList.add('active');
-            
-            logToTerminal(`Switched to ${tabName.toUpperCase()} module`);
+        // ===== UI FUNCTIONS =====
+        function selectMode(mode) {
+            currentMode = mode;
+            document.querySelectorAll('.mode-card').forEach(card => card.classList.remove('active'));
+            document.getElementById(`mode-${mode}`).classList.add('active');
+            log(`Mode switched to: ${mode.toUpperCase()}`, 'info');
         }
 
-        // ==================== TERMINAL LOGGING ====================
-        function logToTerminal(message, type = 'output') {
-            const terminal = document.getElementById('terminal');
-            const line = document.createElement('div');
-            line.className = 'terminal-line';
-            
-            const timestamp = new Date().toLocaleTimeString('en-US', { hour12: false });
-            
-            if (type === 'command') {
-                line.innerHTML = `<span class="terminal-prompt">[${timestamp}] root@nanoxyin:~$</span> <span class="terminal-output">${message}</span>`;
-            } else if (type === 'error') {
-                line.innerHTML = `<span class="terminal-error">[${timestamp}] [ERROR] ${message}</span>`;
-            } else if (type === 'success') {
-                line.innerHTML = `<span class="terminal-success">[${timestamp}] [OK] ${message}</span>`;
-            } else {
-                line.innerHTML = `<span class="terminal-output">[${timestamp}] ${message}</span>`;
-            }
-            
-            terminal.appendChild(line);
-            terminal.scrollTop = terminal.scrollHeight;
-        }
-
-        // ==================== TOAST NOTIFICATIONS ====================
-        function showToast(message, isError = false) {
-            const toast = document.getElementById('toast');
-            toast.textContent = message;
-            toast.className = 'toast' + (isError ? ' error' : '') + ' show';
-            setTimeout(() => toast.classList.remove('show'), 3000);
-        }
-
-        // ==================== FILE HANDLING ====================
-        const dropZone = document.getElementById('dropZone');
-        
-        dropZone.addEventListener('dragover', (e) => {
+        function handleDragOver(e) {
             e.preventDefault();
-            dropZone.classList.add('dragover');
-        });
-        
-        dropZone.addEventListener('dragleave', () => {
-            dropZone.classList.remove('dragover');
-        });
-        
-        dropZone.addEventListener('drop', (e) => {
+            e.currentTarget.classList.add('drag-over');
+        }
+
+        function handleDragLeave(e) {
+            e.currentTarget.classList.remove('drag-over');
+        }
+
+        function handleDrop(e) {
             e.preventDefault();
-            dropZone.classList.remove('dragover');
+            e.currentTarget.classList.remove('drag-over');
             const files = e.dataTransfer.files;
             if (files.length > 0) processFile(files[0]);
-        });
-
-        function handleFileSelect(event) {
-            const file = event.target.files[0];
-            if (file) processFile(file);
         }
 
-        function processFile(file) {
-            selectedFile = file;
-            
-            document.getElementById('fileName').textContent = file.name;
-            document.getElementById('fileSize').textContent = formatBytes(file.size);
-            document.getElementById('fileType').textContent = file.type || 'Unknown';
-            document.getElementById('fileInfo').classList.add('show');
-            document.getElementById('repairOptions').style.display = 'grid';
-            document.getElementById('repairBtn').disabled = false;
-            
-            // Show hex preview of first 256 bytes
-            showHexPreview(file);
-            
-            logToTerminal(`File loaded: ${file.name} (${formatBytes(file.size)})`, 'success');
-            showToast(`File loaded: ${file.name}`);
+        function handleFileSelect(e) {
+            const files = e.target.files;
+            if (files.length > 0) processFile(files[0]);
         }
 
         function formatBytes(bytes) {
@@ -1023,275 +557,330 @@
             return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
         }
 
-        function showHexPreview(file) {
-            const reader = new FileReader();
-            reader.onload = (e) => {
-                const bytes = new Uint8Array(e.target.result);
-                const hexViewer = document.getElementById('hexViewer');
-                let html = '';
-                
-                for (let i = 0; i < bytes.length; i += 16) {
-                    const offset = i.toString(16).padStart(8, '0');
-                    let hexStr = '';
-                    let asciiStr = '';
-                    
-                    for (let j = 0; j < 16 && (i + j) < bytes.length; j++) {
-                        const byte = bytes[i + j];
-                        hexStr += byte.toString(16).padStart(2, '0') + ' ';
-                        asciiStr += (byte >= 32 && byte < 127) ? String.fromCharCode(byte) : '.';
-                    }
-                    
-                    html += `<div><span class="hex-offset">${offset}</span><span class="hex-byte">${hexStr}</span><span class="hex-ascii">${asciiStr}</span></div>`;
-                }
-                
-                hexViewer.innerHTML = html;
-                hexViewer.classList.add('show');
+        function processFile(file) {
+            if (!file.type.startsWith('video/') && !file.name.match(/\.(mp4|mov|avi|mkv|webm|m4v|flv|wmv|ts|m2ts)$/i)) {
+                alert('Please select a valid video file!');
+                return;
+            }
+
+            currentFile = file;
+            
+            // Update UI
+            document.getElementById('fileName').textContent = file.name;
+            document.getElementById('fileSize').textContent = formatBytes(file.size);
+            document.getElementById('fileType').textContent = file.type || 'Unknown';
+            document.getElementById('fileInfoSection').classList.remove('hidden');
+            
+            // Preview
+            const url = URL.createObjectURL(file);
+            const video = document.getElementById('videoPreview');
+            video.src = url;
+            document.getElementById('previewPlaceholder').classList.add('hidden');
+            
+            video.onloadedmetadata = () => {
+                const mins = Math.floor(video.duration / 60);
+                const secs = Math.floor(video.duration % 60);
+                document.getElementById('fileDuration').textContent = `${mins}:${secs.toString().padStart(2, '0')}`;
             };
-            reader.readAsArrayBuffer(file.slice(0, 256));
+
+            log(`File loaded: ${file.name} (${formatBytes(file.size)})`, 'success');
         }
 
-        // ==================== REPAIR MODE SELECTION ====================
-        function selectRepairMode(element, mode) {
-            document.querySelectorAll('.repair-option').forEach(opt => opt.classList.remove('selected'));
-            element.classList.add('selected');
-            repairMode = mode;
-            logToTerminal(`Repair mode switched to: ${mode.toUpperCase()}`);
+        function clearFile() {
+            currentFile = null;
+            document.getElementById('fileInfoSection').classList.add('hidden');
+            document.getElementById('videoPreview').src = '';
+            document.getElementById('previewPlaceholder').classList.remove('hidden');
+            document.getElementById('fileInput').value = '';
+            log('File cleared', 'warn');
         }
 
-        // ==================== FFMPEG.WASM INITIALIZATION ====================
-        async function initFFmpeg() {
+        function resetApp() {
+            clearFile();
+            document.getElementById('resultSection').classList.add('hidden');
+            document.getElementById('progressSection').classList.add('hidden');
+            document.getElementById('terminalLog').innerHTML = `
+                <div class="text-cyber-accent mb-2">=== NanoXyin Video Repair Engine v2.0.1 ===</div>
+                <div class="text-gray-500 mb-2">[- .... . / .... .- -.-. -.- / .. ... / .-. . .- .-..]</div>
+            `;
+        }
+
+        function log(message, type = 'info') {
+            const terminal = document.getElementById('terminalLog');
+            const entry = document.createElement('div');
+            entry.className = `log-entry ${type}`;
+            const time = new Date().toLocaleTimeString('en-US', { hour12: false });
+            entry.textContent = `[${time}] ${message}`;
+            terminal.appendChild(entry);
+            terminal.scrollTop = terminal.scrollHeight;
+        }
+
+        function updateProgress(percent, status) {
+            document.getElementById('progressBar').style.width = percent + '%';
+            document.getElementById('progressPercent').textContent = Math.round(percent) + '%';
+            if (status) document.getElementById('progressStatus').textContent = status;
+            
+            if (startTime) {
+                const elapsed = Math.floor((Date.now() - startTime) / 1000);
+                const mins = Math.floor(elapsed / 60).toString().padStart(2, '0');
+                const secs = (elapsed % 60).toString().padStart(2, '0');
+                document.getElementById('progressTime').textContent = `${mins}:${secs}`;
+            }
+        }
+
+        // ===== FFMPEG LOADING =====
+        async function loadFFmpeg() {
+            if (ffmpeg) return ffmpeg;
+            
+            updateStatus('LOADING', 'yellow');
+            log('Loading ffmpeg.wasm core...', 'info');
+            
             try {
-                logToTerminal('Loading FFmpeg.wasm core...');
                 const { FFmpeg } = FFmpegWASM;
-                const { fetchFile } = FFmpegUtil;
-                
                 ffmpeg = new FFmpeg();
                 
                 ffmpeg.on('log', ({ message }) => {
-                    logToTerminal(`FFmpeg: ${message}`);
+                    log(message, 'info');
                 });
                 
                 ffmpeg.on('progress', ({ progress }) => {
-                    const percent = Math.round(progress * 100);
-                    document.getElementById('progressFill').style.width = percent + '%';
-                    document.getElementById('progressText').textContent = `Processing... ${percent}%`;
+                    updateProgress(progress * 100, 'Processing video...');
                 });
 
-                // Load FFmpeg with core files from unpkg CDN
+                // Load from CDN
+                const baseURL = 'https://unpkg.com/@ffmpeg/core@0.12.6/dist/umd';
                 await ffmpeg.load({
-                    coreURL: 'https://unpkg.com/@ffmpeg/core@0.12.6/dist/umd/ffmpeg-core.js',
-                    wasmURL: 'https://unpkg.com/@ffmpeg/core@0.12.6/dist/umd/ffmpeg-core.wasm'
+                    coreURL: `${baseURL}/ffmpeg-core.js`,
+                    wasmURL: `${baseURL}/ffmpeg-core.wasm`,
                 });
                 
-                ffmpegLoaded = true;
-                document.getElementById('ffmpeg-status').textContent = 'READY';
-                document.getElementById('ffmpeg-status').style.color = 'var(--neon-green)';
-                logToTerminal('FFmpeg.wasm loaded successfully', 'success');
-                
-            } catch (error) {
-                logToTerminal(`FFmpeg load failed: ${error.message}`, 'error');
-                document.getElementById('ffmpeg-status').textContent = 'ERROR';
-                document.getElementById('ffmpeg-status').style.color = 'var(--neon-pink)';
-                showToast('FFmpeg initialization failed. Check console.', true);
+                updateStatus('READY', 'green');
+                log('ffmpeg.wasm loaded successfully!', 'success');
+                return ffmpeg;
+            } catch (err) {
+                updateStatus('ERROR', 'red');
+                log(`Failed to load ffmpeg: ${err.message}`, 'error');
+                throw err;
             }
         }
 
-        // Auto-init FFmpeg on load
-        window.addEventListener('load', initFFmpeg);
+        function updateStatus(status, color) {
+            const indicator = document.getElementById('statusIndicator');
+            const colors = {
+                green: 'bg-green-500/20 text-green-400 border-green-500/30',
+                yellow: 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30',
+                red: 'bg-red-500/20 text-red-400 border-red-500/30'
+            };
+            indicator.className = `px-3 py-1 rounded-full text-xs font-bold border mono ${colors[color]}`;
+            indicator.innerHTML = `<i class="fas fa-circle text-[8px] mr-1 animate-pulse"></i>${status}`;
+        }
 
-        // ==================== VIDEO REPAIR ENGINE ====================
+        // ===== REPAIR ENGINE =====
         async function startRepair() {
-            if (!selectedFile) {
-                showToast('No file selected!', true);
-                return;
-            }
-            
-            if (!ffmpegLoaded) {
-                showToast('FFmpeg not ready yet. Please wait...', true);
+            if (!currentFile) {
+                alert('Please select a video file first!');
                 return;
             }
 
-            const btn = document.getElementById('repairBtn');
-            const btnText = document.getElementById('btnText');
-            const progressBar = document.getElementById('progressBar');
-            const progressText = document.getElementById('progressText');
-            
-            btn.disabled = true;
-            btnText.innerHTML = '<span class="spinner"></span>PROCESSING...';
-            progressBar.classList.add('show');
-            progressText.classList.add('show');
-            
-            logToTerminal(`Starting ${repairMode.toUpperCase()} repair on ${selectedFile.name}...`);
-            
+            if (isProcessing) return;
+            isProcessing = true;
+            startTime = Date.now();
+            abortController = new AbortController();
+
+            document.getElementById('fileInfoSection').classList.add('hidden');
+            document.getElementById('progressSection').classList.remove('hidden');
+            document.getElementById('resultSection').classList.add('hidden');
+
             try {
-                const { fetchFile } = FFmpegUtil;
-                const inputName = 'input' + getExtension(selectedFile.name);
-                const outputName = 'repaired_' + getBaseName(selectedFile.name) + getOutputExtension();
+                const ff = await loadFFmpeg();
+                const inputName = 'input' + getExt(currentFile.name);
+                const outputFormat = document.getElementById('outputFormat').value;
+                const outputName = `repaired_${Date.now()}.${outputFormat}`;
                 
-                // Write file to FFmpeg FS
-                await ffmpeg.writeFile(inputName, await fetchFile(selectedFile));
-                logToTerminal('File written to virtual filesystem', 'success');
-                
-                let command = [];
-                
-                switch(repairMode) {
-                    case 'remux':
-                        // Fast remux - copy streams, fix container
-                        command = [
-                            '-i', inputName,
-                            '-c', 'copy',
-                            '-map', '0',
-                            '-ignore_unknown',
-                            '-fflags', '+genpts+igndts+discardcorrupt',
-                            '-movflags', '+faststart',
-                            outputName
-                        ];
-                        break;
-                        
-                    case 'reencode':
-                        // Full re-encode with H.264
-                        command = [
-                            '-i', inputName,
-                            '-c:v', 'libx264',
-                            '-preset', 'fast',
-                            '-crf', '23',
-                            '-c:a', 'aac',
-                            '-b:a', '128k',
-                            '-movflags', '+faststart',
-                            '-fflags', '+genpts+discardcorrupt',
-                            '-err_detect', 'ignore_err',
-                            outputName
-                        ];
-                        break;
-                        
-                    case 'extract':
-                        // Extract frames as images
-                        command = [
-                            '-i', inputName,
-                            '-vf', 'fps=1,scale=640:-1',
-                            '-q:v', '2',
-                            'frame_%04d.jpg'
-                        ];
-                        break;
-                        
-                    case 'audio':
-                        // Extract audio only
-                        command = [
-                            '-i', inputName,
-                            '-vn',
-                            '-c:a', 'libmp3lame',
-                            '-q:a', '2',
-                            'audio_extracted.mp3'
-                        ];
-                        break;
-                }
-                
-                logToTerminal(`Executing: ffmpeg ${command.join(' ')}`);
-                
-                // Execute FFmpeg command
-                await ffmpeg.exec(command);
-                
-                // Read output file(s)
-                let outputData;
-                let downloadName = outputName;
-                
-                if (repairMode === 'extract') {
-                    // For frame extraction, create a zip-like download of first frame
-                    try {
-                        outputData = await ffmpeg.readFile('frame_0001.jpg');
-                        downloadName = 'frame_0001.jpg';
-                    } catch {
-                        // Try to list files and get any frame
-                        const files = await ffmpeg.listDir('.');
-                        const frameFile = files.find(f => f.name.startsWith('frame_'));
-                        if (frameFile) {
-                            outputData = await ffmpeg.readFile(frameFile.name);
-                            downloadName = frameFile.name;
-                        }
-                    }
-                } else {
-                    outputData = await ffmpeg.readFile(outputName);
-                }
-                
-                // Create download blob
-                const mimeType = repairMode === 'audio' ? 'audio/mpeg' : 
-                                repairMode === 'extract' ? 'image/jpeg' : 'video/mp4';
-                const blob = new Blob([outputData.buffer], { type: mimeType });
-                const url = URL.createObjectURL(blob);
-                
-                // Show preview for video
-                if (repairMode !== 'extract' && repairMode !== 'audio') {
-                    const videoPreview = document.getElementById('videoPreview');
-                    const previewVideo = document.getElementById('previewVideo');
-                    previewVideo.src = url;
-                    videoPreview.classList.add('show');
-                }
-                
-                // Create download link
-                const downloadContainer = document.getElementById('downloadContainer');
-                downloadContainer.innerHTML = `
-                    <a href="${url}" download="${downloadName}" class="download-link">
-                        ⬇ DOWNLOAD REPAIRED FILE: ${downloadName}
-                    </a>
-                `;
-                
-                // Update stats
-                repairedCount++;
-                localStorage.setItem('nanoxyin_repaired', repairedCount);
-                document.getElementById('stat-repaired').textContent = repairedCount;
-                
-                // Cleanup
-                await ffmpeg.deleteFile(inputName);
-                try { await ffmpeg.deleteFile(outputName); } catch(e) {}
-                
-                logToTerminal(`Repair complete! Output: ${downloadName}`, 'success');
-                showToast('Repair completed successfully!');
-                
-            } catch (error) {
-                logToTerminal(`Repair failed: ${error.message}`, 'error');
-                showToast(`Repair failed: ${error.message}`, true);
+                log(`Starting ${currentMode.toUpperCase()} repair...`, 'info');
+                log(`Input: ${inputName} | Output: ${outputName}`, 'info');
+
+                // Write file to ffmpeg FS
+                updateProgress(5, 'Reading file...');
+                const data = await currentFile.arrayBuffer();
+                await ff.writeFile(inputName, new Uint8Array(data));
+                log('File written to virtual filesystem', 'success');
+
+                // Build command based on mode
+                const cmd = buildCommand(inputName, outputName, currentMode);
+                log(`Executing: ffmpeg ${cmd.join(' ')}`, 'info');
+
+                // Execute
+                updateProgress(10, 'Repairing video...');
+                await ff.exec(cmd);
+                log('FFmpeg processing complete!', 'success');
+
+                // Read output
+                updateProgress(90, 'Finalizing...');
+                const outputData = await ff.readFile(outputName);
+                const outputBlob = new Blob([outputData.buffer], { type: `video/${outputFormat}` });
+                const outputUrl = URL.createObjectURL(outputBlob);
+
+                // Cleanup FS
+                await ff.deleteFile(inputName);
+                await ff.deleteFile(outputName);
+
+                // Show results
+                showResults(outputBlob, outputUrl, outputFormat);
+
+            } catch (err) {
+                log(`Error: ${err.message}`, 'error');
+                console.error(err);
+                alert('Repair failed: ' + err.message);
             } finally {
-                btn.disabled = false;
-                btnText.textContent = 'INITIATE REPAIR SEQUENCE';
-                progressBar.classList.remove('show');
-                progressText.classList.remove('show');
-                document.getElementById('progressFill').style.width = '0%';
+                isProcessing = false;
+                abortController = null;
             }
         }
 
-        function getExtension(filename) {
-            return filename.slice(filename.lastIndexOf('.'));
+        function getExt(filename) {
+            const match = filename.match(/\.[^.]+$/);
+            return match ? match[0] : '.mp4';
         }
 
-        function getBaseName(filename) {
-            return filename.slice(0, filename.lastIndexOf('.'));
-        }
+        function buildCommand(input, output, mode) {
+            const format = document.getElementById('outputFormat').value;
+            const preset = document.getElementById('qualityPreset').value;
+            const ignoreUnknown = document.getElementById('ignoreUnknown').checked;
+            const fixTimestamps = document.getElementById('fixTimestamps').checked;
+            const recoverFrames = document.getElementById('recoverFrames').checked;
 
-        function getOutputExtension() {
-            switch(repairMode) {
-                case 'audio': return '.mp3';
-                case 'extract': return '.jpg';
-                default: return '.mp4';
+            let cmd = ['-i', input];
+
+            // Common error handling flags
+            cmd.push('-err_detect', 'ignore_err');
+            cmd.push('-fflags', '+discardcorrupt+genpts+igndts');
+            
+            if (ignoreUnknown) {
+                cmd.push('-ignore_unknown');
             }
+
+            switch (mode) {
+                case 'remux':
+                    // Fast remux - copy streams
+                    cmd.push('-c', 'copy');
+                    if (fixTimestamps) {
+                        cmd.push('-fflags', '+genpts');
+                        cmd.push('-use_wallclock_as_timestamps', '1');
+                    }
+                    cmd.push('-movflags', '+faststart');
+                    break;
+
+                case 'reencode':
+                    // Full re-encode with error recovery
+                    cmd.push('-c:v', 'libx264');
+                    cmd.push('-preset', preset);
+                    cmd.push('-crf', '23');
+                    cmd.push('-c:a', 'aac');
+                    cmd.push('-b:a', '192k');
+                    cmd.push('-movflags', '+faststart');
+                    if (fixTimestamps) {
+                        cmd.push('-vsync', 'cfr');
+                        cmd.push('-r', '30');
+                    }
+                    if (recoverFrames) {
+                        cmd.push('-flags', '+ec');
+                        cmd.push('-deblock', '1:1');
+                    }
+                    break;
+
+                case 'extract':
+                    // Extract frames and reassemble
+                    cmd.push('-c:v', 'libx264');
+                    cmd.push('-preset', preset);
+                    cmd.push('-crf', '18');
+                    cmd.push('-c:a', 'aac');
+                    cmd.push('-b:a', '256k');
+                    cmd.push('-movflags', '+faststart');
+                    cmd.push('-vsync', 'vfr');
+                    break;
+
+                case 'audio':
+                    // Audio only extraction
+                    cmd.push('-vn');
+                    cmd.push('-c:a', 'aac');
+                    cmd.push('-b:a', '320k');
+                    cmd.push('-ar', '48000');
+                    break;
+            }
+
+            // Output overwrite
+            cmd.push('-y');
+            cmd.push(output);
+
+            return cmd;
         }
 
-        // ==================== KEYBOARD SHORTCUTS ====================
-        document.addEventListener('keydown', (e) => {
-            // Ctrl+1-4 for tabs
-            if (e.ctrlKey && e.key >= '1' && e.key <= '4') {
-                const tabs = ['dashboard', 'video', 'terminal', 'about'];
-                const tabButtons = document.querySelectorAll('.nav-tab');
-                tabButtons.forEach(t => t.classList.remove('active'));
-                tabButtons[parseInt(e.key) - 1].classList.add('active');
-                document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
-                document.getElementById(`panel-${tabs[parseInt(e.key) - 1]}`).classList.add('active');
+        function showResults(blob, url, format) {
+            const processTime = Math.floor((Date.now() - startTime) / 1000);
+            const mins = Math.floor(processTime / 60);
+            const secs = processTime % 60;
+
+            document.getElementById('progressSection').classList.add('hidden');
+            document.getElementById('resultSection').classList.remove('hidden');
+
+            document.getElementById('resultOriginalSize').textContent = formatBytes(currentFile.size);
+            document.getElementById('resultRepairedSize').textContent = formatBytes(blob.size);
+            document.getElementById('resultProcessTime').textContent = `${mins}m ${secs}s`;
+            document.getElementById('resultFormat').textContent = format.toUpperCase();
+
+            const video = document.getElementById('resultPreview');
+            video.src = url;
+
+            const downloadBtn = document.getElementById('downloadBtn');
+            downloadBtn.href = url;
+            downloadBtn.download = `NanoXyin_Repaired_${Date.now()}.${format}`;
+
+            log('Repair completed successfully!', 'success');
+            updateStatus('READY', 'green');
+        }
+
+        function cancelRepair() {
+            if (abortController) {
+                abortController.abort();
+            }
+            isProcessing = false;
+            document.getElementById('progressSection').classList.add('hidden');
+            document.getElementById('fileInfoSection').classList.remove('hidden');
+            log('Operation cancelled by user', 'warn');
+        }
+
+        function toggleTheme() {
+            // Placeholder for dark/light toggle (already dark by default)
+            log('Theme toggle (dark mode active)', 'info');
+        }
+
+        // ===== INIT =====
+        window.addEventListener('load', () => {
+            log('NanoXyin Video Repair System initialized', 'success');
+            log('Waiting for file input...', 'info');
+            
+            // Pre-load ffmpeg on idle
+            if ('requestIdleCallback' in window) {
+                requestIdleCallback(() => loadFFmpeg().catch(() => {}));
             }
         });
 
-        // ==================== INIT ====================
-        document.getElementById('stat-repaired').textContent = repairedCount;
-        logToTerminal('NanoXyin Web Interface loaded', 'success');
-        logToTerminal('Ready for commands. Use Ctrl+1-4 to switch tabs.');
+        // Service Worker for PWA
+        if ('serviceWorker' in navigator) {
+            const swCode = `
+                self.addEventListener('install', e => self.skipWaiting());
+                self.addEventListener('activate', e => e.waitUntil(clients.claim()));
+                self.addEventListener('fetch', e => e.respondWith(fetch(e.request).catch(() => new Response('Offline'))));
+            `;
+            const swBlob = new Blob([swCode], { type: 'application/javascript' });
+            const swUrl = URL.createObjectURL(swBlob);
+            navigator.serviceWorker.register(swUrl).catch(() => {});
+        }
     </script>
+
+    <!-- FFmpeg WASM -->
+    <script src="https://unpkg.com/@ffmpeg/ffmpeg@0.12.10/dist/umd/ffmpeg.js"></script>
+    <script src="https://unpkg.com/@ffmpeg/util@0.12.1/dist/umd/index.js"></script>
 </body>
 </html>
